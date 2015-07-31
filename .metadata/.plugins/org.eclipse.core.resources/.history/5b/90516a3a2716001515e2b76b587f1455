@@ -1,0 +1,206 @@
+package client;
+
+import help.MessageBean;
+
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+
+public class Client {
+	public GuiClientMain guiMain;
+	public GuiClient gui; 
+	Socket client;        
+	DataOutputStream ous; 
+	String userName;
+	public static Client c;
+	static ObjectOutputStream oos;
+	static ObjectInputStream ois;
+	
+
+	boolean isExit = false;
+
+	public Client() {
+		c = this;
+		guiMain = new GuiClientMain("��½ ");
+
+	}
+
+	public static void main(String[] args) { 
+		new Client(); 
+		System.out.println("Client:" + Client.c);
+	}
+
+	public void login() { 
+		try {
+			String severIP = guiMain.getAddress();
+			int serverPort = guiMain.getPort();
+			userName = guiMain.getUserName();
+			System.out.println("severIP=" + severIP);
+			System.out.println("serverPort=" + serverPort);
+			System.out.println("userName=" + userName);
+			client = new Socket(severIP, serverPort); 
+
+			System.out.println("于f");
+
+			OutputStream ous = client.getOutputStream();
+
+			// DataOutputStream dataOut = new DataOutputStream(ous);
+			oos = new ObjectOutputStream(ous);
+
+			// String
+			// str="NEW/"+client.getLocalAddress().getHostAddress()+"/"+client.getLocalPort()+"/"+userName+"/";
+			MessageBean message = new MessageBean();
+			message.setHead("NEW");
+			message.setSrcClientIP(client.getLocalAddress().getHostAddress());
+			message.setSrcClientPort(client.getLocalPort());
+			message.setSrcUserName(userName);
+			oos.writeObject(message);
+			oos.flush();
+			
+			guiMain.dispose();
+			gui = new GuiClient(userName);
+
+		
+		
+			gui.setTitle(userName);
+
+			gui.showFrame();
+			gui.addWindowListener(new WindowAdapter() {
+				public void windowClosing(WindowEvent e) {
+
+					quit();
+				}
+			});
+			new Thread(new AcceptMsgThread()).start();
+
+		} catch (Exception e) {
+			System.out.println(e);
+			System.out.println("	IP");
+		}
+	}
+
+	class AcceptMsgThread implements Runnable {
+
+		public void run() {
+			try {
+				InputStream is = client.getInputStream();
+				ois = new ObjectInputStream(is);
+				System.out.println("accpet......");
+				while (!isExit) {
+					
+						MessageBean message;
+						message = (MessageBean) ois.readObject();
+						System.out.println("IP:" + message.getSrcClientIP());
+						commProtocol(message);
+					
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	public void send() {
+		System.out.println("send");
+
+		try {
+			String msg = gui.getSendMsg();
+			System.out.println("msg==" + msg);
+			
+
+			MessageBean message = new MessageBean();
+			message.setSrcClientIP(client.getInetAddress().getHostAddress());
+			message.setSrcClientPort(client.getLocalPort());
+			message.setSrcUserName(userName);
+			message.setMsg(gui.getSendMsg());
+			System.out.println("desc:" + gui.getDes());
+			String des = gui.getDes().trim();
+			if (des.equals("ALL")) {
+				message.setHead("ALL");
+			} else {
+
+				String[] info = des.split("/");
+				message.setDescClientIP(info[0]);
+				message.setDescClientPort(Integer.parseInt(info[1]));
+				message.setDescUserName(info[2]);
+				message.setHead("SingleChat");
+			}
+
+			oos.writeObject(message);
+
+			gui.setSendMsgClear();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+
+		}
+	}
+
+	public void quit() {
+		isExit = true;
+		MessageBean message = new MessageBean();
+		message.setHead("QUIT");
+		message.setSrcClientIP(client.getLocalAddress().getHostAddress());
+		message.setSrcClientPort(client.getLocalPort());
+		message.setSrcUserName(userName);
+		try {
+			oos.writeObject(message);
+
+		} catch (IOException e) {
+			
+		} finally {
+			try {
+				Thread.sleep(500);
+			} catch (InterruptedException e) {
+				}
+			try {
+				client.close();			
+
+			} catch (IOException e) {
+				
+			}
+		}
+
+		System.exit(0);
+	}
+
+	public void commProtocol(MessageBean message)// ͨ��Э��
+	{
+		if (message.getHead().equals("NEW") || message.getHead().equals("OLD")) {
+			System.out.println("�����Ͽͻ��ˣ������ߵĿͻ��������¿ͻ����ϣ�" + message.getHead()
+					+ "," + message.getSrcClientIP() + ","
+					+ message.getSrcClientPort() + ","
+					+ message.getSrcUserName());
+			String choiceStr = message.getSrcClientIP() + "/"
+					+ message.getSrcClientPort() + "/"
+					+ message.getSrcUserName();
+			gui.setChoiceText(choiceStr);
+		}
+
+		if (message.getHead().equals("SingleChat")) {
+
+			gui.addRcvMessage(message.getSrcClientIP() + "/"
+					+ message.getSrcClientPort() + "/"
+					+ message.getSrcUserName() + ":" + message.getMsg());
+		}
+		if (message.getHead().equals("ALL")) {
+			gui.addRcvMessage(message.getSrcClientIP() + "/"
+					+ message.getSrcClientPort() + "/"
+					+ message.getSrcUserName() + ":" + message.getMsg());
+		}
+		if (message.getHead().equals("QUIT")) {
+			System.out.println("quit...." + message.getSrcClientIP() + ","
+					+ message.getSrcClientPort() + ","
+					+ message.getSrcUserName());
+             
+		}
+
+	}
+
+}

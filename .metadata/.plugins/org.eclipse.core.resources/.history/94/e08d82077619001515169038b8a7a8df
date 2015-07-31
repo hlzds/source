@@ -1,0 +1,131 @@
+package client;
+import help.MongodbLink;
+
+import java.awt.EventQueue;
+
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.border.EmptyBorder;
+import javax.swing.JLabel;
+import javax.swing.SwingConstants;
+import javax.swing.JTextField;
+import javax.swing.JPasswordField;
+import javax.swing.JButton;
+
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.UIManager;
+import java.awt.Window.Type;
+import java.awt.Toolkit;
+import java.awt.Canvas;
+import javax.swing.ImageIcon;
+import java.awt.Color;
+
+
+public class Main extends JFrame {
+
+	
+	private static final long serialVersionUID = 1L;
+	private JPanel contentPane;
+	private JTextField loginAccountTextField;
+	private JPasswordField loginPasswordField;
+	static guiMain frame = new guiMain();
+	
+	
+	public static void main(String[] args) {
+		
+		
+		EventQueue.invokeLater(new Runnable() {
+			public void run() {
+				try {
+					
+					frame.setVisible(true);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
+	}
+
+	
+	 
+	public Main() {
+		setIconImage(Toolkit.getDefaultToolkit().getImage(guiMain.class.getResource("/img/bgPic.png")));
+		setType(Type.POPUP);
+		
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setBounds(100, 100, 450, 183);
+		contentPane = new JPanel();
+		contentPane.setBorder(UIManager.getBorder("EditorPane.border"));
+		setContentPane(contentPane);
+		contentPane.setLayout(null);
+		
+		JLabel loginAccountLlabel = new JLabel("账号");
+		loginAccountLlabel.setHorizontalAlignment(SwingConstants.CENTER);
+		loginAccountLlabel.setBounds(69, 6, 95, 50);
+		contentPane.add(loginAccountLlabel);
+		
+		JLabel loginPasswordLabel = new JLabel("密码");
+		loginPasswordLabel.setHorizontalAlignment(SwingConstants.CENTER);
+		loginPasswordLabel.setBounds(69, 51, 95, 50);
+		contentPane.add(loginPasswordLabel);
+		
+		loginAccountTextField = new JTextField();
+		loginAccountTextField.setColumns(10);
+		loginAccountTextField.setBounds(169, 17, 134, 28);
+		contentPane.add(loginAccountTextField);
+		
+		loginPasswordField = new JPasswordField();
+		loginPasswordField.setBounds(169, 62, 134, 28);
+		contentPane.add(loginPasswordField);
+		
+		//登陆按钮
+		JButton loginButton = new JButton("登陆");
+		loginButton.setBounds(167, 113, 62, 29);
+		contentPane.add(loginButton);
+		loginButton.addActionListener(event->{
+			
+				String username = "";
+				String loginPassword = new String(loginPasswordField.getPassword());//输入的密码
+				String password = null;// 从数据库中得到的密码
+				
+				username = loginAccountTextField.getText(); //获取输入的用户名
+				//获取输入的密码
+
+				//连接数据库，从数据库获取密码，并验证登陆
+				MongodbLink ml =new MongodbLink();
+				password = ml.getPassword(username);
+								    
+
+				if (loginPassword.compareTo(password)==0){
+					frame.setVisible(false);					
+					new MyFriendList(username);					
+				}		
+		});
+		
+		
+		//注册按钮
+		JButton loginRegisterButton = new JButton("注册");
+		loginRegisterButton.setBounds(241, 113, 62, 29);
+		contentPane.add(loginRegisterButton);
+		
+		JLabel lblNewLabel = new JLabel("");
+		lblNewLabel.setVerticalAlignment(SwingConstants.BOTTOM);
+		lblNewLabel.setForeground(Color.WHITE);
+		lblNewLabel.setIcon(new ImageIcon(guiMain.class.getResource("/img/bgPic.png")));
+		lblNewLabel.setBounds(56, 6, 316, 151);
+		contentPane.add(lblNewLabel);
+		loginRegisterButton.addActionListener(new ActionListener(){
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if(e.getSource()==loginRegisterButton){
+					frame.setVisible(false);
+					frame.dispose();
+					new RegisterDemo();
+				}
+			}
+		});
+		
+	}
+}

@@ -1,0 +1,99 @@
+package server;
+
+import java.awt.BorderLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JTextArea;
+import javax.swing.JScrollPane;
+import javax.swing.JScrollBar;
+import java.awt.Color;
+
+public class GuiServer extends JFrame {
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	public JTextArea text = new JTextArea("我是萌萌哒的服务器~", 10, 40);
+	private JButton startButton = new JButton("开始");
+	private JButton closeButton = new JButton("关闭");
+
+	
+	private JPanel p1 = new JPanel();
+	private JPanel p2 = new JPanel();
+	private JPanel p3 = new JPanel();
+	private final JScrollBar scrollBar = new JScrollBar();
+
+	public GuiServer(final Server server) {
+		super("服务器");
+		setBackground(new Color(255, 255, 0));
+		setForeground(new Color(255, 0, 0));
+		setTitle("聊天服务器");
+		p1.add(startButton);
+		p1.add(closeButton);
+		startButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				text.setText("服务器开始工作....");
+				server.startServer();
+			}
+		});
+		//添加一个键盘监听事件
+		startButton.setMnemonic('y');
+		text.setBackground(new Color(0, 191, 255));
+		text.setEnabled(false);
+		text.setEditable(false);
+		
+		text.addKeyListener(new KeyListener() {
+			
+			@Override
+			public void keyTyped(KeyEvent e) {
+				if("\n".equals(e.getKeyChar())){
+					text.setText("你按下了回车键....");
+					text.setText("服务器开始工作....");
+					
+					server.startServer();
+				}// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void keyPressed(KeyEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void keyReleased(KeyEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			
+		});
+		
+
+		closeButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				server.endServer();
+				
+			}
+		});
+
+		p2.add(text);
+		getContentPane().add(p2, BorderLayout.NORTH);
+		
+		p2.add(scrollBar);
+		getContentPane().add(p1, BorderLayout.CENTER);
+		this.pack();
+		this.setVisible(true);
+
+		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	}
+
+}

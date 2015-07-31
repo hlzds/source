@@ -1,0 +1,243 @@
+package server;
+
+import help.ClientInfo;
+import help.MessageBean;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.awt.SystemColor;
+import java.awt.Color;
+import javax.swing.JTable;
+
+public class Server {
+	ServerSocket serverSocket = null;
+	GuiServer guiServer;
+
+	LinkedList<ClientInfo> clientList = new LinkedList<ClientInfo>();
+
+	boolean isExit = false;
+
+	public Server() {
+		guiServer = new GuiServer(this);
+		guiServer.setForeground(Color.PINK);
+		guiServer.setBackground(Color.YELLOW);
+	}
+
+	class StartServerThread implements Runnable {
+		int count = 0;
+
+		public void run() {
+			System.out.println("服务器已经开启……");
+			while (!isExit) {
+				try {
+					if (serverSocket == null)
+						break;
+					Socket clientSocket = serverSocket.accept();
+
+					ServerReadThread newThread = new ServerReadThread(
+							clientSocket);
+
+					new Thread(newThread).start();
+
+					guiServer.text.setText(guiServer.text.getText() + "\n这是第"
+							+ (++count) + "个用户");
+
+				} catch (IOException e) {
+					// e.printStackTrace();
+				}
+			}
+		}
+	}
+
+	class ServerReadThread implements Runnable {
+		Socket clientSocket;
+		ObjectOutputStream oos;
+		ObjectInputStream ois;
+		Runnable newThread;
+
+		public ServerReadThread(Socket clientSocket) {
+			this.clientSocket = clientSocket;
+			this.newThread = newThread;
+		}
+
+		public void run() {
+			try {
+				ois = new ObjectInputStream(clientSocket.getInputStream());
+				String str = null;
+				while (!isExit) {
+					if (clientSocket == null)
+						break;
+
+					MessageBean message = null;
+					if ((message = (MessageBean) ois.readObject()) != null) {
+						System.out.println("head:" + message.getHead());
+						commProtocol(message);
+					}
+
+				}
+
+			} catch (IOException e) {
+				// e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				// e.printStackTrace();
+			}
+		}
+
+		public ClientInfo searchClientInfo(String ip, int port, String userName) {
+			Iterator<ClientInfo> it = clientList.iterator();
+			ClientInfo info = null;
+			while (it.hasNext()) {
+				info = it.next();
+				if ((info.getClientIP().equals(ip))
+						&& (info.getClientPort() == port)
+						&& info.getUserName().equals(userName)) {
+					return info;
+				}
+			}
+			return null;
+		}
+
+		public void send(ObjectOutputStream oos, MessageBean message) {
+			try {
+				oos.writeObject(message);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+
+		public void commProtocol(MessageBean message)
+		{
+			if ("NEW".equals(message.getHead())) {
+
+				ClientInfo clientInfo = new ClientInfo();
+				clientInfo.setClientSocket(clientSocket);
+				clientInfo.setClientThread(this);
+				clientInfo.setClientIP(message.getSrcClientIP());
+				clientInfo.setClientPort(message.getSrcClientPort());
+				clientInfo.setClientSocket(clientSocket);
+				clientInfo.setUserName(message.getSrcUserName());
+				try {
+					clientInfo.setObjectOutputStream(new ObjectOutputStream(
+							clientSocket.getOutputStream()));
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+				sendNewToOld(message);
+				sendOldToNew(clientInfo.getObjectOutputStream());
+
+				clientList.add(clientInfo);
+
+			} else if (message.getHead().equals("SingleChat")) {
+				ClientInfo info = searchClientInfo(message.getDescClientIP(),
+						message.getDescClientPort(), message.getDescUserName());
+				if (info != null) {
+					send(info.getObjectOutputStream(), message);
+				} else {
+
+				}
+			} else if (message.getHead().equals("ALL")) {
+				System.out.println(message.getHead());
+
+				Iterator<ClientInfo> it = clientList.iterator();
+				while (it.hasNext()) {
+					System.out.println("all mesasge");
+					send(it.next().getObjectOutputStream(), message);
+				}
+			} else if (message.getHead().equals("QUIT")) {
+
+			}
+
+		}
+
+	}
+
+	public void sendNewToOld(MessageBean message) {
+		Iterator<ClientInfo> it = clientList.iterator();
+		try {
+			while (it.hasNext()) {
+				it.next().getObjectOutputStream().writeObject(message);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	// 把老客户端对象发给新客户端
+	public void sendOldToNew(ObjectOutputStream newObjectStream) {
+		Iterator<ClientInfo> it = clientList.iterator();
+		ClientInfo clientInfo = null;
+		try {
+			while (it.hasNext()) {
+				MessageBean message = new MessageBean();
+				clientInfo = it.next();
+				message.setHead("OLD");
+				message.setSrcClientIP(clientInfo.getClientIP());
+				message.setSrcClientPort(clientInfo.getClientPort());
+				message.setSrcUserName(clientInfo.getUserName());
+				newObjectStream.writeObject(message);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	public static void main(String[] args) {
+		new Server();
+	}
+
+	public void startServer() {
+		try {
+			serverSocket = new ServerSocket(8000);
+			new Thread(new StartServerThread()).start();
+			// new Thread(new StartServerThread()).run();;//wrong
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void endServer() {
+		isExit = true;
+		if (serverSocket != null) {
+			/*
+			 * try { Iterator<ClientInfo> it = clientList.iterator(); while
+			 * (it.hasNext()) { ClientInfo c = it.next(); Runnable r =
+			 * c.getClientThread();
+			 * 
+			 * }
+			 * 
+			 * 
+			 * } catch (IOException e) { // TODO Auto-generated catch block
+			 * e.printStackTrace(); }
+			 */
+			// finally{
+			try {
+				Thread.sleep(500);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			try {
+				serverSocket.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			serverSocket = null;
+
+		}
+
+		System.exit(0);
+	}
+
+}
